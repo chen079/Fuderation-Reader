@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聊天记录阅读器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github-dark.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11/highlight.min.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="min-h-screen">
+    <div id="app" class="flex h-screen">
+        <!-- 侧边栏 -->
+        <aside class="w-72 bg-[#1a1a1a] border-r border-[#2a2a2a] flex flex-col">
+            <div class="p-4 border-b border-[#2a2a2a]">
+                <h1 class="text-lg font-semibold text-white">聊天记录阅读器</h1>
+                <p class="text-sm text-gray-500 mt-1">导入 JSON 文件查看</p>
+            </div>
+
+            <!-- 文件导入区 -->
+            <div class="p-3">
+                <label class="drop-zone block rounded-lg p-4 text-center cursor-pointer hover:border-[#505050]"
+                       @dragover.prevent="dragOver = true"
+                       @dragleave="dragOver = false"
+                       @drop.prevent="handleDrop"
+                       :class="{ 'drag-over': dragOver }">
+                    <input type="file" accept=".json" @change="handleFileSelect" class="hidden">
+                    <svg class="w-8 h-8 mx-auto mb-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    <span class="text-sm text-gray-400">点击或拖拽导入</span>
+                </label>
+            </div>
+
+            <!-- 搜索框 -->
+            <div class="px-3 pb-2" v-if="sessions.length > 0">
+                <input type="text" v-model="searchQuery" placeholder="搜索会话..."
+                       class="w-full bg-[#252525] border border-[#353535] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#6366f1]">
+            </div>
+
+            <!-- 会话列表 -->
+            <div class="flex-1 overflow-y-auto scrollbar-thin">
+                <div v-if="filteredSessions.length === 0 && sessions.length > 0" class="p-4 text-center text-gray-500 text-sm">
+                    无匹配结果
+                </div>
+                <div v-for="(session, index) in filteredSessions" :key="session.id"
+                     @click="selectSession(index)"
+                     class="session-item px-4 py-3 cursor-pointer border-b border-[#252525] group"
+                     :class="{ 'active': currentIndex === index }">
+                    <div class="flex items-center gap-2">
+                        <img v-if="session.persona?.avatar" :src="session.persona.avatar"
+                             class="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                             @error="$event.target.style.display='none'">
+                        <div class="w-8 h-8 rounded-full bg-[#353535] flex items-center justify-center flex-shrink-0" v-else>
+                            <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/>
+                            </svg>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="font-medium truncate text-sm">{{ session.title || '未命名会话' }}</div>
+                            <div class="text-xs text-gray-500 mt-0.5">
+                                {{ session.persona?.name || '助手' }} · {{ session.messages?.length || 0 }} 条消息
+                            </div>
+                        </div>
+                        <!-- 删除按钮 -->
+                        <button @click="deleteSession(index, $event)"
+                                class="opacity-0 group-hover:opacity-100 p-1 text-gray-500 hover:text-red-400 transition-opacity"
+                                title="删除">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 统计信息 -->
+            <div v-if="sessions.length > 0" class="p-3 border-t border-[#2a2a2a] flex items-center justify-between">
+                <span class="text-xs text-gray-500">共 {{ sessions.length }} 个会话</span>
+                <button @click="clearAllSessions" class="text-xs text-gray-500 hover:text-red-400" title="清空所有">
+                    清空
+                </button>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="flex-1 flex flex-col bg-[#0f0f0f]">
+            <!-- 空状态 -->
+            <div v-if="!currentSession" class="flex-1 flex items-center justify-center">
+                <div class="text-center">
+                    <svg class="w-16 h-16 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                    </svg>
+                    <p class="text-gray-500">导入聊天记录开始阅读</p>
+                    <p class="text-gray-600 text-sm mt-2">支持单个会话或批量导出的 JSON 文件</p>
+                </div>
+            </div>
+
+            <!-- 会话头部 -->
+            <header v-if="currentSession" class="px-6 py-4 border-b border-[#1a1a1a] bg-[#141414]">
+                <div class="flex items-center gap-3">
+                    <img v-if="currentSession.persona?.avatar" :src="currentSession.persona.avatar"
+                         class="w-10 h-10 rounded-full object-cover"
+                         @error="$event.target.style.display='none'">
+                    <div>
+                        <h2 class="font-semibold">{{ currentSession.title || '未命名会话' }}</h2>
+                        <p class="text-sm text-gray-500">
+                            {{ currentSession.persona?.name || '助手' }} ·
+                            {{ formatDate(currentSession.created_at) }}
+                        </p>
+                    </div>
+                </div>
+            </header>
+
+            <!-- 消息列表 -->
+            <div v-if="currentSession" class="flex-1 overflow-y-auto scrollbar-thin px-4 py-6" ref="messageContainer">
+                <div class="max-w-3xl mx-auto space-y-4">
+                    <div v-for="(msg, idx) in currentSession.messages" :key="idx"
+                         class="fade-in"
+                         :style="{ animationDelay: idx * 0.03 + 's' }">
+                        <!-- 用户消息 -->
+                        <div v-if="msg.role === 'user'" class="flex justify-end gap-2">
+                            <div class="max-w-[85%] bg-[#1e3a5f] rounded-2xl rounded-tr-sm px-4 py-3">
+                                <div class="message-content text-sm" v-html="renderContent(msg.content)"></div>
+                                <div class="text-xs text-blue-300/50 mt-2 text-right" v-if="msg.timestamp">
+                                    {{ formatTime(msg.timestamp) }}
+                                </div>
+                            </div>
+                            <div class="w-9 h-9 rounded-full bg-[#3b82f6] flex items-center justify-center flex-shrink-0 text-white text-sm font-medium">
+                                我
+                            </div>
+                        </div>
+
+                        <!-- 助手消息 -->
+                        <div v-else-if="msg.role === 'assistant'" class="flex justify-start gap-2">
+                            <img v-if="currentSession.persona?.avatar"
+                                 :src="currentSession.persona.avatar"
+                                 class="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                                 @error="$event.target.style.display='none'">
+                            <div v-else class="w-9 h-9 rounded-full bg-[#8b5cf6] flex items-center justify-center flex-shrink-0 text-white text-sm font-medium">
+                                {{ (currentSession.persona?.name || 'AI').charAt(0) }}
+                            </div>
+                            <div class="max-w-[85%] bg-[#1f1f1f] rounded-2xl rounded-tl-sm px-4 py-3 border border-[#2a2a2a]">
+                                <div class="message-content text-sm" v-html="renderContent(msg.content)"></div>
+                                <div class="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                                    <span v-if="msg.model" class="bg-[#2a2a2a] px-2 py-0.5 rounded">{{ msg.model }}</span>
+                                    <span v-if="msg.timestamp">{{ formatTime(msg.timestamp) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/db.js"></script>
+    <script src="js/markdown-custom.js"></script>
+    <script src="js/markdown-base.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
