@@ -56,6 +56,10 @@ async function build() {
     fs.writeFileSync(path.join(__dirname, 'dist', 'index.html'), html);
     console.log('Built: dist/index.html');
 
+    // 创建 CNAME 文件（自定义域名需要）
+    fs.writeFileSync(path.join(__dirname, 'dist', 'CNAME'), 'reader.fuderation.com');
+    console.log('Created: dist/CNAME');
+
     console.log('\nBuild complete! Deploy the dist/ folder.');
 }
 
