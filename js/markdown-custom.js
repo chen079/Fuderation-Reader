@@ -383,15 +383,15 @@ const MarkdownCustom = {
         const idx = parseInt(el.dataset.idx);
         const chat = window._chatListData[listId][idx];
         const detail = document.getElementById(listId + '-detail');
+        const itemsContainer = el.parentElement;
+        const header = itemsContainer.previousElementSibling;
 
-        if (detail.style.display !== 'none' && detail.dataset.idx === String(idx)) {
-            detail.style.display = 'none';
-            el.classList.remove('active');
-            return;
+        // 隐藏列表和头部，显示详情
+        itemsContainer.style.display = 'none';
+        if (header && header.classList.contains('fd-chatlist-header')) {
+            header.style.display = 'none';
         }
-
-        el.parentElement.querySelectorAll('.fd-chatlist-item').forEach(i => i.classList.remove('active'));
-        el.classList.add('active');
+        detail.style.display = 'block';
 
         const messages = chat.messages.map(m => {
             if (m.isSystem) {
@@ -415,13 +415,27 @@ const MarkdownCustom = {
 
         detail.innerHTML = `
             <div class="fd-chatlist-detail-header">
-                <button onclick="this.parentElement.parentElement.style.display='none';document.querySelector('.fd-chatlist-item.active')?.classList.remove('active')">← 返回</button>
+                <button onclick="MarkdownCustom.closeChat(this, '${listId}')">←</button>
                 <span>${chat.title || '聊天'}</span>
             </div>
-            <div class="fd-chatlist-detail-body">${messages}</div>
+            <div class="fd-chatlist-detail-body custom-scrollbar">${messages}</div>
         `;
         detail.dataset.idx = String(idx);
-        detail.style.display = 'block';
+    },
+
+    closeChat(btn, listId) {
+        const detail = document.getElementById(listId + '-detail');
+        const itemsContainer = detail.previousElementSibling; // .fd-chatlist-items
+        const header = itemsContainer.previousElementSibling; // .fd-chatlist-header
+
+        detail.style.display = 'none';
+        itemsContainer.style.display = 'block';
+        if (header) {
+            header.style.display = 'block';
+        }
+        
+        // 清除选中状态
+        itemsContainer.querySelectorAll('.fd-chatlist-item.active').forEach(i => i.classList.remove('active'));
     },
 
     // HTML 转义

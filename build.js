@@ -2,7 +2,7 @@ const { minify } = require('terser');
 const fs = require('fs');
 const path = require('path');
 
-const jsFiles = ['db.js', 'markdown-custom.js', 'markdown-base.js', 'app.js'];
+const jsFiles = ['db.js', 'markdown-custom.js', 'markdown-base.js', 'ui-kit.js', 'app.js'];
 const srcDir = path.join(__dirname, 'js');
 const distDir = path.join(__dirname, 'dist', 'js');
 
@@ -45,7 +45,7 @@ async function build() {
 
     // 替换多个 JS 引用为单个 bundle
     html = html.replace(
-        /<script src="js\/db\.js"><\/script>\s*<script src="js\/markdown-custom\.js"><\/script>\s*<script src="js\/markdown-base\.js"><\/script>/,
+        /<script src="js\/db\.js"><\/script>\s*<script src="js\/markdown-custom\.js"><\/script>\s*<script src="js\/markdown-base\.js"><\/script>\s*<script src="js\/ui-kit\.js"><\/script>/,
         ''
     );
     html = html.replace(

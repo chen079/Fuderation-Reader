@@ -13,6 +13,16 @@ createApp({
         const dragOver = ref(false);
         const messageContainer = ref(null);
         const dbReady = ref(false);
+        const showSidebar = ref(window.innerWidth >= 768);
+
+        // 监听窗口大小变化
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768) {
+                showSidebar.value = true;
+            } else {
+                showSidebar.value = false;
+            }
+        });
 
         const filteredSessions = computed(() => {
             if (!searchQuery.value.trim()) return sessions.value;
@@ -72,31 +82,34 @@ createApp({
                     } else if (data.messages) {
                         newSessions = [data];
                     } else {
-                        alert('无法识别的文件格式');
+                        UIKit.alert('无法识别的文件格式', '导入失败');
                         return;
                     }
 
-                    // 确保每个会话有 id
-                    newSessions = newSessions.map(s => ({
-                        ...s,
-                        id: s.id || Date.now() + '-' + Math.random().toString(36).substr(2, 9)
-                    }));
-
-                    // 合并到现有会话（去重）
+                    // 确保每个会话有唯一 ID (如果 ID 已存在则重新生成，允许重复导入)
                     const existingIds = new Set(sessions.value.map(s => s.id));
-                    const toAdd = newSessions.filter(s => !existingIds.has(s.id));
 
-                    if (toAdd.length > 0) {
-                        sessions.value = [...toAdd, ...sessions.value];
+                    newSessions = newSessions.map(s => {
+                        let id = s.id;
+                        // 如果没有 ID 或者 ID 已存在，则生成新 ID
+                        if (!id || existingIds.has(id)) {
+                            id = Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                        }
+                        return { ...s, id };
+                    });
+
+                    if (newSessions.length > 0) {
+                        sessions.value = [...newSessions, ...sessions.value];
                         // 保存到 IndexedDB
                         if (dbReady.value) {
-                            await ReaderDB.saveSessions(toAdd);
+                            await ReaderDB.saveSessions(newSessions);
                         }
+                        UIKit.toast(`成功导入 ${newSessions.length} 个会话`, 'success');
                     }
 
                     currentIndex.value = 0;
                 } catch (err) {
-                    alert('JSON 解析失败: ' + err.message);
+                    UIKit.alert('JSON 解析失败: ' + err.message, '错误');
                 }
             };
             reader.readAsText(file);
@@ -104,6 +117,9 @@ createApp({
 
         function selectSession(index) {
             currentIndex.value = index;
+            if (window.innerWidth < 768) {
+                showSidebar.value = false;
+            }
             nextTick(() => {
                 if (messageContainer.value) {
                     messageContainer.value.scrollTop = 0;
@@ -111,12 +127,16 @@ createApp({
             });
         }
 
+        function toggleSidebar() {
+            showSidebar.value = !showSidebar.value;
+        }
+
         async function deleteSession(index, e) {
             e.stopPropagation();
             const session = filteredSessions.value[index];
             if (!session) return;
 
-            if (!confirm(`确定删除「${session.title || '未命名会话'}」？`)) return;
+            if (!await UIKit.confirm(`确定删除「${session.title || '未命名会话'}」？`, '删除确认')) return;
 
             // 从数组中移除
             const realIndex = sessions.value.findIndex(s => s.id === session.id);
@@ -136,7 +156,7 @@ createApp({
         }
 
         async function clearAllSessions() {
-            if (!confirm('确定清空所有会话？此操作不可恢复。')) return;
+            if (!await UIKit.confirm('确定清空所有会话？此操作不可恢复。', '清空确认')) return;
 
             sessions.value = [];
             currentIndex.value = -1;
@@ -144,6 +164,7 @@ createApp({
             if (dbReady.value) {
                 await ReaderDB.clearAll();
             }
+            UIKit.toast('所有会话已清空', 'success');
         }
 
         function renderContent(content) {
@@ -193,7 +214,9 @@ createApp({
             clearAllSessions,
             renderContent,
             formatDate,
-            formatTime
+            formatTime,
+            showSidebar,
+            toggleSidebar
         };
     }
 }).mount('#app');
