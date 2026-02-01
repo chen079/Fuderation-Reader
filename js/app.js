@@ -14,6 +14,26 @@ createApp({
         const messageContainer = ref(null);
         const dbReady = ref(false);
         const showSidebar = ref(window.innerWidth >= 768);
+        
+        // Theme
+        const isDarkMode = ref(localStorage.getItem('theme') !== 'light');
+        const editingMessage = ref(null); // { msg, index, content }
+
+        // Initialize theme
+        if (!isDarkMode.value) {
+            document.documentElement.setAttribute('data-theme', 'light');
+        }
+
+        function toggleTheme() {
+            isDarkMode.value = !isDarkMode.value;
+            if (isDarkMode.value) {
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+            }
+        }
 
         // 监听窗口大小变化
         window.addEventListener('resize', () => {
@@ -198,6 +218,107 @@ createApp({
             });
         }
 
+        // Message Actions
+        async function deleteMessage(index) {
+            if (!currentSession.value) return;
+            if (!await UIKit.confirm('确定删除这条消息？', '删除消息')) return;
+
+            currentSession.value.messages.splice(index, 1);
+            
+            // Save to DB
+            if (dbReady.value) {
+                await ReaderDB.saveSession(JSON.parse(JSON.stringify(currentSession.value)));
+            }
+            UIKit.toast('消息已删除', 'success');
+        }
+
+        function copyMessage(content) {
+            if (typeof content !== 'string') {
+                // Handle array content (multimodal)
+                if (Array.isArray(content)) {
+                    content = content.filter(c => c.type === 'text').map(c => c.text).join('\n');
+                } else {
+                    content = String(content);
+                }
+            }
+            navigator.clipboard.writeText(content).then(() => {
+                UIKit.toast('已复制到剪贴板', 'success');
+            }).catch(() => {
+                UIKit.toast('复制失败', 'error');
+            });
+        }
+
+        function startEditMessage(msg, index) {
+            let content = msg.content;
+            if (Array.isArray(content)) {
+                content = content.find(c => c.type === 'text')?.text || '';
+            }
+            editingMessage.value = {
+                index,
+                content: content
+            };
+            
+            nextTick(() => {
+                const el = document.getElementById('edit-box-' + index);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+        }
+
+        function cancelEdit() {
+            editingMessage.value = null;
+        }
+
+        async function saveMessage() {
+            if (!editingMessage.value || !currentSession.value) return;
+            
+            const idx = editingMessage.value.index;
+            const newContent = editingMessage.value.content;
+            const msg = currentSession.value.messages[idx];
+
+            if (Array.isArray(msg.content)) {
+                // Update text part in multimodal message
+                const textPart = msg.content.find(c => c.type === 'text');
+                if (textPart) {
+                    textPart.text = newContent;
+                } else {
+                    msg.content.push({ type: 'text', text: newContent });
+                }
+            } else {
+                msg.content = newContent;
+            }
+
+            // Save to DB
+            if (dbReady.value) {
+                await ReaderDB.saveSession(JSON.parse(JSON.stringify(currentSession.value)));
+            }
+            
+            editingMessage.value = null;
+            UIKit.toast('消息已更新', 'success');
+        }
+
+        function exportSession() {
+            if (!currentSession.value) return;
+            
+            const data = JSON.stringify(currentSession.value, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            
+            let filename = (currentSession.value.title || 'chat-export').replace(/[\\/:*?"<>|]/g, '_');
+            if (!filename.endsWith('.json')) filename += '.json';
+            
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            UIKit.toast('导出成功', 'success');
+        }
+
         return {
             sessions,
             currentIndex,
@@ -216,7 +337,17 @@ createApp({
             formatDate,
             formatTime,
             showSidebar,
-            toggleSidebar
+            toggleSidebar,
+            // New exports
+            isDarkMode,
+            toggleTheme,
+            deleteMessage,
+            copyMessage,
+            editingMessage,
+            startEditMessage,
+            cancelEdit,
+            saveMessage,
+            exportSession
         };
     }
 }).mount('#app');

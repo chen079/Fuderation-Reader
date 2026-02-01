@@ -9,12 +9,12 @@ window.UIKit = {
         container.innerHTML = `
             <div id="ui-toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
             <div id="ui-modal-overlay" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center backdrop-blur-sm opacity-0 transition-opacity duration-200">
-                <div id="ui-modal-content" class="bg-[#1a1a1a] border border-[#333] rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4 transform scale-95 transition-all duration-200 translate-y-4">
-                    <h3 id="ui-modal-title" class="text-lg font-bold text-white mb-2"></h3>
-                    <p id="ui-modal-message" class="text-gray-300 mb-6 text-sm leading-relaxed"></p>
+                <div id="ui-modal-content" class="bg-[var(--bg-secondary)] border border-[var(--border-color)] rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4 transform scale-95 transition-all duration-200 translate-y-4">
+                    <h3 id="ui-modal-title" class="text-lg font-bold text-[var(--text-primary)] mb-2"></h3>
+                    <p id="ui-modal-message" class="text-[var(--text-secondary)] mb-6 text-sm leading-relaxed"></p>
                     <div id="ui-modal-actions" class="flex justify-end gap-3">
-                        <button id="ui-modal-cancel" class="px-4 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#252525] text-sm font-medium transition-colors">取消</button>
-                        <button id="ui-modal-confirm" class="px-4 py-2 rounded-lg bg-[#6366f1] hover:bg-[#4f46e5] text-white text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20">确定</button>
+                        <button id="ui-modal-cancel" class="px-4 py-2 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] text-sm font-medium transition-colors">取消</button>
+                        <button id="ui-modal-confirm" class="px-4 py-2 rounded-lg bg-[var(--accent)] hover:opacity-90 text-white text-sm font-medium transition-colors shadow-lg shadow-indigo-500/20">确定</button>
                     </div>
                 </div>
             </div>
@@ -110,10 +110,10 @@ window.UIKit = {
         
         const toast = document.createElement('div');
         const colors = {
-            info: 'bg-[#252525] border-[#333] text-gray-200',
-            success: 'bg-[#1a2e1a] border-[#2f4f2f] text-green-400',
-            error: 'bg-[#2e1a1a] border-[#4f2f2f] text-red-400',
-            warning: 'bg-[#2e261a] border-[#4f3f2f] text-yellow-400'
+            info: 'bg-[var(--bg-secondary)] border-[var(--border-color)] text-[var(--text-primary)]',
+            success: 'bg-green-900/20 border-green-900/30 text-green-500',
+            error: 'bg-red-900/20 border-red-900/30 text-red-500',
+            warning: 'bg-yellow-900/20 border-yellow-900/30 text-yellow-500'
         };
         
         const icons = {
