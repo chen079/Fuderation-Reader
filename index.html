@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聊天记录阅读器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/github-dark.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11/highlight.min.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="min-h-screen bg-[#0f0f0f] text-gray-200 overflow-hidden font-sans">
+    <div id="app" class="flex h-screen relative">
+        <!-- Mobile Overlay -->
+        <div v-if="showSidebar" 
+             class="fixed inset-0 bg-black/60 z-30 md:hidden backdrop-blur-sm transition-opacity"
+             @click="toggleSidebar">
+        </div>
+
+        <!-- 侧边栏 -->
+        <aside class="fixed inset-y-0 left-0 z-40 w-72 bg-[#1a1a1a]/95 backdrop-blur-md border-r border-[#2a2a2a] flex flex-col transition-transform duration-300 ease-in-out md:relative md:translate-x-0 shadow-2xl md:shadow-none"
+               :class="showSidebar ? 'translate-x-0' : '-translate-x-full'">
+            
+            <!-- 侧边栏头部 -->
+            <div class="p-4 border-b border-[#2a2a2a] flex items-center justify-between">
+                <div>
+                    <h1 class="text-lg font-bold text-white tracking-wide">Reader</h1>
+                    <p class="text-xs text-gray-500 mt-0.5">Fuderation Chat Logs</p>
+                </div>
+                <!-- Mobile Close Button -->
+                <button @click="toggleSidebar" class="md:hidden p-2 text-gray-400 hover:text-white rounded-lg hover:bg-[#2a2a2a]">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- 文件导入区 -->
+            <div class="p-4">
+                <label class="drop-zone block rounded-xl border-2 border-dashed border-[#333] p-6 text-center cursor-pointer hover:border-[#6366f1] hover:bg-[#6366f1]/5 transition-all group"
+                       @dragover.prevent="dragOver = true"
+                       @dragleave="dragOver = false"
+                       @drop.prevent="handleDrop"
+                       :class="{ 'drag-over': dragOver }">
+                    <input type="file" accept=".json" @change="handleFileSelect" class="hidden">
+                    <div class="w-10 h-10 mx-auto mb-3 rounded-full bg-[#252525] flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-[#6366f1]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                    </div>
+                    <span class="text-sm text-gray-400 group-hover:text-gray-300">导入 JSON</span>
+                </label>
+            </div>
+
+            <!-- 搜索框 -->
+            <div class="px-4 pb-3" v-if="sessions.length > 0">
+                <div class="relative">
+                    <input type="text" v-model="searchQuery" placeholder="搜索会话..."
+                           class="w-full bg-[#252525] border border-transparent focus:border-[#6366f1] rounded-lg pl-9 pr-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-[#6366f1] transition-all">
+                    <svg class="w-4 h-4 text-gray-600 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- 会话列表 -->
+            <div class="flex-1 overflow-y-auto scrollbar-thin px-2 space-y-1">
+                <div v-if="filteredSessions.length === 0 && sessions.length > 0" class="p-8 text-center">
+                    <p class="text-gray-500 text-sm">无匹配结果</p>
+                </div>
+                <div v-for="(session, index) in filteredSessions" :key="session.id"
+                     @click="selectSession(index)"
+                     class="session-item px-3 py-3 rounded-lg cursor-pointer flex items-center gap-3 group relative overflow-hidden"
+                     :class="currentIndex === index ? 'bg-[#6366f1] text-white shadow-lg shadow-indigo-500/20' : 'text-gray-400 hover:bg-[#252525] hover:text-gray-200'">
+                    
+                    <div class="relative flex-shrink-0">
+                        <img v-if="session.persona?.avatar" :src="session.persona.avatar"
+                             class="w-10 h-10 rounded-full object-cover ring-2 ring-opacity-20"
+                             :class="currentIndex === index ? 'ring-white' : 'ring-transparent'"
+                             @error="$event.target.style.display='none'">
+                        <div class="w-10 h-10 rounded-full bg-[#353535] flex items-center justify-center flex-shrink-0 text-gray-500" v-else>
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <div class="min-w-0 flex-1">
+                        <div class="font-medium truncate text-sm" :class="currentIndex === index ? 'text-white' : 'text-gray-300'">
+                            {{ session.title || '未命名会话' }}
+                        </div>
+                        <div class="text-xs truncate mt-0.5 opacity-80">
+                            {{ session.persona?.name || '助手' }} · {{ session.messages?.length || 0 }} 条消息
+                        </div>
+                    </div>
+
+                    <!-- 删除按钮 -->
+                    <button @click="deleteSession(index, $event)"
+                            class="md:opacity-0 group-hover:opacity-100 p-1.5 rounded-md transition-all absolute right-2 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white"
+                            :class="currentIndex === index ? 'text-white/80 hover:text-white hover:bg-white/20' : ''"
+                            title="删除">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 底部统计 -->
+            <div v-if="sessions.length > 0" class="p-4 border-t border-[#2a2a2a] bg-[#141414]/50 flex items-center justify-between text-xs">
+                <span class="text-gray-500">{{ sessions.length }} 个会话 · {{ totalMessages }} 条消息</span>
+                <button @click="clearAllSessions" class="text-gray-500 hover:text-red-400 transition-colors">
+                    清空
+                </button>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="flex-1 flex flex-col w-full h-full bg-[#0f0f0f] relative overflow-hidden">
+            <!-- Mobile Header (Always visible on mobile) -->
+            <header class="md:hidden h-14 border-b border-[#2a2a2a] bg-[#141414]/90 backdrop-blur-md flex items-center px-4 justify-between z-20 shrink-0">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <button @click="toggleSidebar" class="text-gray-400 hover:text-white p-1 -ml-1">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                    <span class="font-medium truncate text-sm" v-if="currentSession">{{ currentSession.title }}</span>
+                    <span class="font-medium text-sm text-gray-500" v-else>Reader</span>
+                </div>
+                <div v-if="currentSession && currentSession.persona?.avatar">
+                    <img :src="currentSession.persona.avatar" class="w-8 h-8 rounded-full">
+                </div>
+            </header>
+
+            <!-- Desktop Header (Only when session selected) -->
+            <header v-if="currentSession" class="hidden md:flex px-6 py-4 border-b border-[#1a1a1a] bg-[#141414]/95 backdrop-blur-sm shrink-0 items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="relative">
+                         <img v-if="currentSession.persona?.avatar" :src="currentSession.persona.avatar"
+                             class="w-12 h-12 rounded-full object-cover ring-2 ring-[#2a2a2a]"
+                             @error="$event.target.style.display='none'">
+                    </div>
+                   
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-100">{{ currentSession.title || '未命名会话' }}</h2>
+                        <div class="flex items-center gap-2 text-sm text-gray-500 mt-0.5">
+                            <span class="bg-[#2a2a2a] px-2 py-0.5 rounded text-xs text-gray-400">{{ currentSession.persona?.name || '助手' }}</span>
+                            <span>·</span>
+                            <span>{{ formatDate(currentSession.created_at) }}</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- 空状态 -->
+            <div v-if="!currentSession" class="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                <div class="w-24 h-24 bg-[#1a1a1a] rounded-full flex items-center justify-center mb-6 shadow-2xl">
+                    <svg class="w-10 h-10 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-gray-200 mb-2">准备好阅读了吗？</h3>
+                <p class="text-gray-500 max-w-sm mx-auto mb-8">从左侧导入 JSON 格式的聊天记录，开始愉快的阅读体验。</p>
+                <button @click="toggleSidebar" class="md:hidden px-6 py-2.5 bg-[#252525] hover:bg-[#303030] text-gray-300 rounded-lg text-sm font-medium transition-colors">
+                    打开菜单导入
+                </button>
+            </div>
+
+            <!-- 消息列表 -->
+            <div v-if="currentSession" class="flex-1 overflow-y-auto scrollbar-thin px-2 md:px-6 py-4 md:py-8 bg-[#0f0f0f]" ref="messageContainer">
+                <div class="max-w-4xl mx-auto space-y-6 pb-10">
+                    <div v-for="(msg, idx) in currentSession.messages" :key="idx"
+                         class="fade-in group"
+                         :style="{ animationDelay: Math.min(idx * 0.05, 1) + 's' }">
+                        
+                        <!-- 用户消息 -->
+                        <div v-if="msg.role === 'user'" class="flex justify-end gap-3 pl-10">
+                            <div class="flex flex-col items-end min-w-0">
+                                <div class="bg-[#2563eb] text-white rounded-2xl rounded-tr-none px-4 py-3 shadow-md shadow-blue-900/10">
+                                    <div class="message-content text-[15px] leading-relaxed select-text" v-html="renderContent(msg.content)"></div>
+                                </div>
+                                <div class="text-xs text-gray-600 mt-1.5 mr-1" v-if="msg.timestamp">
+                                    {{ formatTime(msg.timestamp) }}
+                                </div>
+                            </div>
+                            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 text-white text-xs font-bold shadow-lg mt-1">
+                                ME
+                            </div>
+                        </div>
+
+                        <!-- 助手消息 -->
+                        <div v-else-if="msg.role === 'assistant'" class="flex justify-start gap-3 pr-4 md:pr-10">
+                            <div class="flex-shrink-0 mt-1">
+                                <img v-if="currentSession.persona?.avatar"
+                                     :src="currentSession.persona.avatar"
+                                     class="w-9 h-9 rounded-full object-cover shadow-lg ring-2 ring-[#2a2a2a]"
+                                     @error="$event.target.style.display='none'">
+                                <div v-else class="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold shadow-lg">
+                                    {{ (currentSession.persona?.name || 'A').charAt(0) }}
+                                </div>
+                            </div>
+                            
+                            <div class="flex flex-col min-w-0 max-w-full">
+                                <div class="bg-[#1a1a1a] text-gray-200 rounded-2xl rounded-tl-none px-5 py-4 border border-[#2a2a2a] shadow-sm">
+                                    <div class="message-content text-[15px] leading-relaxed select-text" v-html="renderContent(msg.content)"></div>
+                                </div>
+                                <div class="flex items-center gap-2 mt-1.5 ml-1 text-xs text-gray-600">
+                                    <span v-if="msg.model" class="font-mono text-gray-500">{{ msg.model }}</span>
+                                    <span v-if="msg.timestamp">· {{ formatTime(msg.timestamp) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+    <script src="js/bundle.min.js"></script>
+</body>
+</html>

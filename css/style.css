@@ -1,0 +1,385 @@
+/* style.css - 阅读器样式 */
+
+:root {
+    --bg-primary: #0f0f0f;
+    --bg-secondary: #1a1a1a;
+    --bg-tertiary: #252525;
+    --text-primary: #e5e5e5;
+    --text-secondary: #a0a0a0;
+    --accent: #6366f1;
+}
+
+body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+/* 选中文本颜色 */
+::selection {
+    background: rgba(99, 102, 241, 0.3);
+    color: #fff;
+}
+
+/* 滚动条 */
+.scrollbar-thin::-webkit-scrollbar { width: 5px; height: 5px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+.scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #4a4a4a; }
+
+/* 会话列表 */
+.session-item { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+/* .session-item:hover { background: var(--bg-tertiary); } Removed to let Tailwind handle it */
+/* .session-item.active { background: var(--accent); color: white; } Removed to let Tailwind handle it */
+
+/* 拖拽区域 */
+.drop-zone { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.drop-zone.drag-over { border-color: var(--accent) !important; background: rgba(99, 102, 241, 0.15); transform: scale(1.02); }
+
+/* 动画 */
+.fade-in { animation: fadeIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(15px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* 消息内容 */
+.message-content { line-height: 1.7; }
+.message-content p { margin-bottom: 0.75em; }
+.message-content p:last-child { margin-bottom: 0; }
+.message-content pre { background: #0d0d0d; border-radius: 8px; padding: 1em; overflow-x: auto; margin: 0.75em 0; }
+.message-content code { font-family: 'Fira Code', 'Consolas', monospace; font-size: 0.9em; }
+.message-content :not(pre) > code { background: rgba(255,255,255,0.1); padding: 0.2em 0.4em; border-radius: 4px; }
+.message-content ul, .message-content ol { margin: 0.5em 0; padding-left: 1.5em; }
+.message-content li { margin: 0.25em 0; }
+.message-content blockquote { border-left: 3px solid var(--accent); padding-left: 1em; margin: 0.75em 0; color: var(--text-secondary); }
+
+/* 表格样式 */
+.message-content table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1em 0;
+    background: #151515;
+}
+.message-content th, 
+.message-content td {
+    border: 1px solid #333;
+    padding: 0.6em 0.8em;
+    text-align: left;
+}
+.message-content th {
+    background: #252525;
+    font-weight: 600;
+}
+
+/* 图片样式 */
+.message-content img {
+    margin: 1em 0;
+    max-width: 100%;
+    border-radius: 6px;
+    display: inline-block;
+}
+
+/* ========== 自定义标签样式 ========== */
+
+/* 通用折叠块 */
+.fd-think, .fd-memory, .fd-status, .fd-fold {
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    margin: 0.75em 0;
+    overflow: hidden;
+}
+.fd-think summary, .fd-memory summary, .fd-status summary, .fd-fold summary {
+    padding: 0.75em 1em;
+    cursor: pointer;
+    font-weight: 500;
+    background: #222;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+}
+.fd-think summary:hover, .fd-memory summary:hover, .fd-status summary:hover, .fd-fold summary:hover {
+    background: #282828;
+}
+.fd-think-content, .fd-memory-content, .fd-status-content, .fd-fold-content {
+    padding: 1em;
+    border-top: 1px solid #2a2a2a;
+}
+
+/* 深度思考 - 特殊样式 */
+.fd-think { border-left: 3px solid #8b5cf6; }
+.fd-think summary { color: #a78bfa; }
+.fd-think-content { white-space: pre-wrap; font-family: monospace; font-size: 0.9em; color: #9ca3af; }
+
+/* 记忆块 */
+.fd-memory { border-left: 3px solid #f59e0b; }
+.fd-memory summary { color: #fbbf24; }
+
+/* 状态块 */
+.fd-status { border-left: 3px solid #3b82f6; }
+.fd-status summary { color: #60a5fa; }
+
+/* 折叠块 - 支持自定义颜色 */
+.fd-fold { border-left: 3px solid #6b7280; }
+.fd-fold summary { color: #9ca3af; }
+.fd-fold[style*="--fold-color"] { border-left-color: var(--fold-color); }
+.fd-fold[style*="--fold-color"] summary { color: var(--fold-color); }
+
+/* 结束块 */
+.fd-endchat {
+    background: linear-gradient(135deg, #1f1f1f 0%, #2a1a1a 100%);
+    border: 1px solid #3f2a2a;
+    border-radius: 8px;
+    margin: 0.75em 0;
+    overflow: hidden;
+}
+.fd-endchat-header {
+    padding: 0.75em 1em;
+    background: rgba(239, 68, 68, 0.1);
+    color: #f87171;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+}
+.fd-endchat-content {
+    padding: 1em;
+}
+
+/* 剧透遮罩 */
+.fd-hide {
+    background: #333;
+    color: transparent;
+    padding: 0.1em 0.3em;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+}
+.fd-hide:hover { background: #444; }
+.fd-hide.revealed { background: transparent; color: inherit; }
+
+/* 二维码占位 */
+.fd-qrcode {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    padding: 0.5em 1em;
+    border-radius: 6px;
+    color: #9ca3af;
+    font-size: 0.9em;
+}
+
+/* ========== 论坛评论 ========== */
+.fd-comment-container {
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    margin: 0.75em 0;
+    overflow: hidden;
+}
+.fd-comment {
+    display: flex;
+    gap: 0.75em;
+    padding: 1em;
+    border-bottom: 1px solid #252525;
+}
+.fd-comment:last-child { border-bottom: none; }
+.fd-comment-reply { padding-left: 3em; background: #151515; }
+.fd-comment-avatar-wrap { flex-shrink: 0; }
+.fd-comment-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.fd-comment-avatar-fallback {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+}
+.fd-comment-body { flex: 1; min-width: 0; }
+.fd-comment-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75em;
+    margin-bottom: 0.5em;
+}
+.fd-comment-author { font-weight: 500; color: #60a5fa; }
+.fd-comment-reply-info { color: #6b7280; font-size: 0.85em; }
+.fd-comment-floor { color: #6b7280; font-size: 0.85em; margin-left: auto; }
+.fd-comment-content { color: #d1d5db; }
+.fd-comment-content p { margin: 0; }
+
+/* ========== QQ风格聊天 ========== */
+.fd-chat {
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    margin: 0.75em 0;
+    overflow: hidden;
+}
+.fd-chat-title {
+    padding: 0.75em 1em;
+    background: #222;
+    font-weight: 500;
+    border-bottom: 1px solid #2a2a2a;
+}
+.fd-chat-system {
+    text-align: center;
+    padding: 0.5em;
+    color: #6b7280;
+    font-size: 0.85em;
+}
+.fd-chat-msg {
+    display: flex;
+    gap: 0.5em;
+    padding: 0.75em 1em;
+    align-items: flex-start;
+}
+.fd-chat-right { flex-direction: row-reverse; }
+.fd-chat-avatar-wrap { flex-shrink: 0; }
+.fd-chat-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.fd-chat-avatar-fallback {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 12px;
+}
+.fd-chat-bubble {
+    max-width: 70%;
+    background: #252525;
+    border-radius: 12px;
+    padding: 0.5em 0.75em;
+}
+.fd-chat-right .fd-chat-bubble { background: #1e3a5f; }
+.fd-chat-author {
+    font-size: 0.75em;
+    color: #6b7280;
+    margin-bottom: 0.25em;
+}
+.fd-chat-text { font-size: 0.9em; }
+.fd-chat-text p { margin: 0; }
+
+/* ========== 消息列表 (chatList) ========== */
+.fd-chatlist {
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    margin: 0.75em 0;
+    overflow: hidden;
+}
+.fd-chatlist-header {
+    padding: 0.75em 1em;
+    background: #222;
+    font-weight: 500;
+    border-bottom: 1px solid #2a2a2a;
+}
+.fd-chatlist-items { }
+.fd-chatlist-item {
+    display: flex;
+    gap: 0.75em;
+    padding: 0.75em 1em;
+    cursor: pointer;
+    border-bottom: 1px solid #252525;
+    transition: background 0.15s;
+}
+.fd-chatlist-item:hover { background: #222; }
+.fd-chatlist-item.active { background: #252525; }
+.fd-chatlist-item:last-child { border-bottom: none; }
+.fd-chatlist-avatar-wrap { position: relative; flex-shrink: 0; }
+.fd-chatlist-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.fd-chatlist-avatar-fallback {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 16px;
+}
+.fd-chatlist-unread {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    background: #ef4444;
+    border-radius: 50%;
+    border: 2px solid #1a1a1a;
+}
+.fd-chatlist-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+.fd-chatlist-title { font-weight: 500; margin-bottom: 0.25em; }
+.fd-chatlist-preview { color: #6b7280; font-size: 0.85em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* chatList 详情面板 */
+.fd-chatlist-detail {
+    border-top: 1px solid #2a2a2a;
+    background: #151515;
+}
+.fd-chatlist-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 1em;
+    padding: 0.75em 1em;
+    background: #1a1a1a;
+    border-bottom: 1px solid #2a2a2a;
+}
+.fd-chatlist-detail-header button {
+    background: none;
+    border: none;
+    color: #60a5fa;
+    cursor: pointer;
+    padding: 0.25em 0.5em;
+    border-radius: 4px;
+}
+.fd-chatlist-detail-header button:hover { background: #252525; }
+.fd-chatlist-detail-body {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 0.5em 0;
+}
+
+/* 内部滚动条美化 */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* 图标 */
+.fd-icon { font-style: normal; }
