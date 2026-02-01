@@ -7,6 +7,10 @@ const srcDir = path.join(__dirname, 'js');
 const distDir = path.join(__dirname, 'dist', 'js');
 
 async function build() {
+    // 确保输出目录存在
+    fs.mkdirSync(path.join(__dirname, 'dist', 'js'), { recursive: true });
+    fs.mkdirSync(path.join(__dirname, 'dist', 'css'), { recursive: true });
+
     // 合并所有 JS 文件
     let combined = '';
     for (const file of jsFiles) {
